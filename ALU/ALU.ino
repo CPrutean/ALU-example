@@ -1,4 +1,6 @@
 #include <LCD_I2C.h>
+#include <string.h>
+
 #define zeroButtonRead 4
 #define oneButtonRead 2
 
@@ -6,7 +8,8 @@
 #define true 1
 #define false 0
 
-const int buttonPresses[] = {1, 16, 16, 1, 1, 1, 1, 1, 1};
+const int buttonPresses[] = {1, 1, 16, 16, 1, 1, 1, 1, 1, 1};
+static int operations[6];
 static char* numInput[9];
 const char* phases[] = {
   "Welcome to the hack ALU demo",
@@ -24,7 +27,7 @@ const char* phases[] = {
 
 LCD_I2C lcd(0x27, 16, 2);
 void setup() {
-
+  Serial.begin(9600);
   pinMode(zeroButtonRead, INPUT);
   pinMode(oneButtonRead, INPUT);
   lcd.begin();
@@ -39,17 +42,58 @@ int phase = 0;
 int phaseInd = 0;
 
 void updatePhaseString(int buttonPress) {
-  char temp = (char)(buttonPress+(int)'0')
-  *(numInput+phaseInd) = temp;
-  lcd.print(temp);
-  phaseind++;
-  lcd.setCursor(15-phaseind, 1);
 
-  if (phaseind >= buttonPresses[phase]) {
+  char temp = (char) (buttonPress+(int)'0');
+  *(numInput[phase]+(buttonPresses[phase]-phaseInd-1)) = temp;
+  lcd.print(temp);
+  phaseInd++;
+  lcd.setCursor(15-phaseInd, 1);
+
+  if (phaseInd >= buttonPresses[phase]) {
     phase++;
+    phaseInd = 0;
+    delay(1000);
     updateDisplay();
   }
+  if (phase >= 9) {
+    calculations();
+  }
+}
 
+void calculations() {
+  int x[16];
+  int y[16];
+  int zx = (int)(*(buttonPresses[4]))-(int)'0';
+  int nx = (int)(*(buttonPresses[5]))-(int)'0';
+  int zy = (int)(*(buttonPresses[6]))-(int)'0';
+  int ny = (int)(*(buttonPresses[7]))-(int)'0';
+  int f = (int)(*(buttonPresses[8]))-(int)'0';
+  int n = (int)(*(buttonPresses[9]))-(int)'0';
+
+  int i;
+  for (i = 0; i < 16; i++) {
+    x[15-i] = *(buttonPresses[2]+15-i);
+    y[15-i] = *(buttonPresses[3]+15-i);
+  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Calculating");
+  lcd.setCursor(11, 0);
+  int i;
+  int j;
+  int cursor = strlen("Calculating");
+  for (i=0; i < 5; i++) {
+    for (j = 0; j < 5; j++) {
+      lcd.print(".");
+      lcd.setCursor(++cursor, 0);
+      delay(250);
+    }
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Calculating");
+    cursor = strlen("Calculating");
+    lcd.setCursor(0, cursor);
+  }
 }
 
 void isButtonPressed(int button1, int button2) {
@@ -73,9 +117,49 @@ void isButtonPressed(int button1, int button2) {
 
 
 void updateDisplay() {
-  int temp = 0;
-  int i;
-  lcd.print(phases[phase]);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  int i = 0;
+  int length = 0;
+
+  while (*(phases[phase]+i) != '\0') {
+    i++;
+    length++;
+  }
+
+  if (length > 16) {
+    int temp = 0;
+    int currSpaceIndex = 0;
+    for (i = 0; i < length; i++) {
+      if (*(phases[phase]+i) == ' ') {
+        temp = currSpaceIndex;
+        currSpaceIndex = i;
+      } else if (currSpaceIndex>16) {
+        currSpaceIndex = temp;
+        break;
+      }
+    }
+    char* tempString1 = (char*)malloc(sizeof(char)*currSpaceIndex);
+    char* tempString2 = (char*)malloc(sizeof(char)*(length-currSpaceIndex));
+    for (i = 0; i < currSpaceIndex; i++) {
+      *(tempString1+i) = *(phases[phase]+i); 
+    }
+    *(tempString1+currSpaceIndex) = '\0';
+    for (i = 0; i < (length-currSpaceIndex); i++) {
+      *(tempString2+i) = *(phases[phase]+(i+currSpaceIndex+1));
+    }
+    *(tempString2+length) = '\0';
+
+     
+    lcd.print(tempString1);
+    lcd.setCursor(0, 1);
+    lcd.print(tempString2);
+    lcd.setCursor(15, 1);
+    free(tempString1);
+    free(tempString2);
+  } else {
+    lcd.print(phases[phase]);
+  }
   for (i=0; i < buttonPresses[phase]; i++) {
     *(numInput[phase]+i) = '-';
   }
