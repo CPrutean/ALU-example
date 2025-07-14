@@ -9,7 +9,7 @@
 #define false 0
 
 const int buttonPresses[] = {1, 1, 16, 16, 1, 1, 1, 1, 1, 1};
-static char* numInput[9];
+static char* numInput[10];
 const char* phases[] = {
   "Welcome to the hack ALU demo",
   "Press any button to continue",
@@ -54,21 +54,24 @@ void updatePhaseString(int buttonPress) {
     delay(1000);
     updateDisplay();
   }
-  if (phase >= 9) {
+  if (phase >= 10) {
     calculations();
   }
 }
 
 void calculations() {
+  int i;
   int xy[2][16];
-  int oper[] = {(int) *(numInput[4]) - (int)('0'), (int) *(numInput[5]) - (int)('0'), (int) *(numInput[6]) - (int)('0'), 
-  (int) *(numInput[7]) - (int)('0'), (int) *(numInput[8]) - (int)('0'), (int) *(numInput[9]) - (int)('0')};
+  int oper[6];
+  for (i = 0; i < 6 i++) {
+    oper[i] = (int)*(numInput[4+i])-(int)'0';
+  }
   char* operName[] = {"ox", "oy", "zx", "nx", "zy", "ny", "f", "N"};
 
-  int i;
+  
   for (i = 0; i < 16; i++) {
-    xy[0][15-i] = *(numInput[2]+15-i);
-    xy[1][15-i] = *(numInput[3]+15-i);
+    xy[0][15-i] = (int)*(numInput[2]+15-i)-(int)'0';
+    xy[1][15-i] = (int)*(numInput[3]+15-i)-(int)'0';
   }
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -86,7 +89,7 @@ void calculations() {
     lcd.setCursor(0, 0);
     lcd.print("Calculating");
     cursor = strlen("Calculating");
-    lcd.setCursor(0, cursor);
+    lcd.setCursor(cursor, 0);
   }
 
   char* display[] = {"Original X:", "Original Y:", "Zero X:", "Not X:", "Zero Y:", "Not Y:", "Add or And:", "Not output:"};
@@ -94,39 +97,45 @@ void calculations() {
   int bitLength = sizeof(xy[0])/sizeof(xy[0][0]);
   int k;
   int* final = (int*)malloc(sizeof(int)*16);
+  int indOfOper;
   for (i = 0; i < length; i++) {
     lcd.setCursor (0, 0);
     lcd.print(display[i]);
     lcd.setCursor(0, 1);
-    int indOfOper = (int)*(operName+1)-(int)'x';
+    if (i < 7) {
+      indOfOper = (int)*(operName+1)-(int)'x';
+    }
     int lcdCursor = 0;
 
     for (j = 0; j < 16; j++) {
-      if (*(operName[i]) == 'o' && oper[i] == 1) {
-        lcd.print(xy[indOfOper][j]);
-      } else if (*(operName[i]) == 'z' && oper[i] == 1) {
+      if (*(operName[i]) == 'z' && oper[i+2] == 1) {
         xy[indOfOper][j] = 0;
-        lcd.print(xy[indOfOper][j]);
-      } else if (*(operName[i]) == 'n' && oper[i] == 1) {
-        xy[indOfOper][j] = !xy[indOfOper][j];
-        lcd.print(xy[indOfOper][j]);
+      } else if (*(operName[i]) == 'n' && oper[i+2] == 1) {
+        xy[indOfOper][j] = Not(xy[indOfOper][j]);
       } else if (*(operName[i]) == 'f') {
         addOrAnd(xy, oper[i], final);
-      } else if (*(operName[i]) == 'N') {
-        *(final+j) = !*(final+j);
+      } else if (*(operName[i]) == 'N' && oper[i+2] == 1) {
+        *(final+j) = Not(*(final+j));
+        lcd.print(*(final+j));
+      } else if (*(operName[i]) == 'N' && oper[i+2] == 0) {
         lcd.print(*(final+j));
       }
+      lcd.print(xy[indOfOper][j]);
       lcd.setCursor(++lcdCursor, 1);
     }
+    delay(2000);
+    lcd.clear();
   }
 }
-
+int Not(int i) {
+  return i==0;
+}
 //In the spirit of this project the logic for adding the bits together are going to be done with the same logic used for the chip
 void addOrAnd(int inputArr[2][16], int sel, int* finalPtr) {
   int i;
   if (sel == 0) {
     for (i = 0; i < 16; i++) {
-      *(finalPtr+i) = inputArr[0][i] && inputArr[1][i];
+      *(finalPtr+i) = inputArr[0][i] == 1 && inputArr[1][i] == 1;
     }
   } else {
     int carry = inputArr[0][0] && inputArr[1][0];
