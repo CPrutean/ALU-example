@@ -54,115 +54,72 @@ void updatePhaseString(int buttonPress) {
     updateDisplay();
   }
   if (phase >= 9) {
-    calculations();
+    finalCalculations();
   }
 }
 
-void addOrAnd(int arr[2][16], int sel) {
-
+void finalCalculations() {
+  bool x[16];
+  bool y[16];
+  bool finalOutput[16];
   int i;
-  for (i = 0; i < 16; i++ ) {
-    arrFinal[i] = 0;
+  for (i = 0; i < 16; i++) {
+    x[i] = (bool) *(numInput[2]+i);
+    y[i] = (bool) *(numInput[3]+i);
   }
-  if (sel == 0) {
-    for(i = 0; i < 16; i++) {
-      if (arr[0][i] == 1 && arr[1][i] == 1) {
-        arrFinal[i] = 1;
-      } else {
-        arrFinal[i] = 0;
-      }
-    }
-  } else {
-    int carry;
-    int tempXor;
-    int tempAnd;
-    if (arr[0][0] != arr[1][0]) {
-      arrFinal[i] = 1;
-    }
-    tempAnd = arr[0][0] && arr[1][0];
-    for (i = 1; i < 16; i++) {
-      tempXor = arr[0][i] != arr[1][i];
-      arrFinal[i] = tempXor != carry;
-      carry = arr[0][i] && arr[1][i] && carry;
-    }
-  }
-}
-
-void calculations() {
-  int i;
-  int xy[2][16];
-  int oper[6];
+  
+  char* outputDisplay[] = {"Original X", "Original Y", "Zero X", "Not X", "Zero Y", "Not Y", "Add or And", "Negate output"};
+  char* output[] = {"ox", "oy", "zx", "nx", "zy", "ny", "ff", "nf"};
+  int length = sizeof(outputDisplay)/sizeof(outputDisplay[0]);
+  bool opers[6];
   for (i = 0; i < 6; i++) {
-    oper[i] = *(numInput[4+i]);
-  }
-  char* operName[] = {"ox", "oy", "zx", "nx", "zy", "ny", "f", "N"};
-  
-  
-  for (i = 0; i < 16; i++) {
-    xy[0][15-i] = *(numInput[2]+15-i);
-    xy[1][15-i] = *(numInput[3]+15-i);
-  }
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Calculating");
-  lcd.setCursor(11, 0);
-  int j;
-  int cursor = strlen("Calculating");
-  for (i=0; i < 5; i++) {
-    for (j = 0; j < 5; j++) {
-      lcd.print(".");
-      lcd.setCursor(++cursor, 0);
-      delay(250);
-    }
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Calculating");
-    cursor = strlen("Calculating");
-    lcd.setCursor(cursor, 0);
+    opers[i] = (bool) *(numInput[i+3]);
   }
 
-  char* display[] = {"Original X:", "Original Y:", "Zero X:", "Not X:", "Zero Y:", "Not Y:", "Add or And:", "Not output:"};
-  int length = sizeof(display)/sizeof(display[0]);
-  int bitLength = sizeof(xy[0])/sizeof(xy[0][0]);
-  int ind;
-  int cursInd;
-  for (i = 0; i < length-2; i++) {
-    cursInd = 0;
-    lcd.setCursor(0, 0);
-    lcd.print(display[i]);
-    lcd.setCursor(0, 1);
-    if (i < 7) {
-      ind = (int)*(operName[i]+1)-(int)'x';
-    }
-    for (j = 0; j < 16; j++) {
-      if (*(operName[i]) == 'z' && oper[i-2] == 1) {
-        xy[ind][j] = 0;
-      } else if (*(operName[i]) == 'n' && oper[i-2] == 1) {
-        if (xy[ind][j] == 1) {
-          xy[ind][j] = 0;
-        } else {
-          xy[ind][j] = 1;
-        }
-      } else if (*(operName[i]) == 'f') {
-        addOrAnd(xy, oper[i-2]);
-        break;
-      }
-      lcd.setCursor(j, 1);
-      lcd.print(xy[ind][j]);
-    }
-    delay(1000);
+  bool** arrPtr = (bool**)malloc(sizeof(bool*)*3);
+  *(arrPtr) = x;
+  *(arrPtr+1) = y;
+  *(arrPtr+2) = finalOutput;
+  int j;
+  int arrInd = 0;
+  for (i = 0; i < length; i++) {
     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(outputDisplay[i]);
+    lcd.setCursor(0, 1);
+    //Indexes 0 and 1 are printing the original inputs
+    //Indexes 2 and 3 are for manipulating x
+    //Indexes 3 and 4 are for manipulating y
+    //Indexes 5 and 6 are for manipulating the final outputs
+    if (*(output[i]+1) == 'x') {
+      arrInd = 0;
+    } else if (*(output[i]+1) == 'y') {
+      arrInd = 1;
+    } else {
+      arrInd = 2;
+    }
+    bool carry = false;
+    for (j = 0; j < 16; j++) {
+      if (*(output[i]) == 'n' && opers[i-2]) {
+        *(*(arrPtr+arrInd)+j) = ! *(*(arrPtr+arrInd)+j);
+      } else if (*(output[i]) == 'z' && opers[i-2]) {
+        *(*(arrPtr+arrInd)+j) = false;
+      } else if (*(output[i]) == 'f' && opers[4] == false) {
+        finalOutput[j] = x[j] && y[j];
+      } else if (*(output[i]) == 'f' && opers[4] == true) {
+        carry = adder(carry, x[j], y[j], *(arrPtr+arrInd), j);
+      }
+      lcd.print((int) *(*(arrPtr+arrInd)+j));
+    }
+    delay(2000);
   }
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Final display");
-  for (i = 0; i < 16; i++) {
-    lcd.setCursor(i, 1);
-    lcd.print(final[i]);
-  }
-  free(display);
-  free(operName);
-  free(oper);
+}
+
+//Will set the value at the index for the final array and return the carry bit
+bool adder(bool bit1, bool bit2, bool bit3, bool* value, int ind) {
+  bool tempBool = bit1!=bit2;
+  *(value+ind) = tempBool != bit3;
+  return bit1 && bit2 && bit3;
 }
 
 void isButtonPressed(int button1, int button2) {
