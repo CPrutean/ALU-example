@@ -10,7 +10,7 @@
 
 const int buttonPresses[] = {1, 1, 16, 16, 1, 1, 1, 1, 1, 1};
 static int* numInput[10];
-static int final[16];
+static int arrFinal[16];
 const char* phases[] = {
   "Welcome to the hack ALU demo",
   "Press any button to continue",
@@ -59,32 +59,31 @@ void updatePhaseString(int buttonPress) {
 }
 
 void addOrAnd(int arr[2][16], int sel) {
+
   int i;
+  for (i = 0; i < 16; i++ ) {
+    arrFinal[i] = 0;
+  }
   if (sel == 0) {
     for(i = 0; i < 16; i++) {
       if (arr[0][i] == 1 && arr[1][i] == 1) {
-        final[i] = 1;
+        arrFinal[i] = 1;
       } else {
-        final[i] = 0;
+        arrFinal[i] = 0;
       }
     }
   } else {
     int carry;
     int tempXor;
     int tempAnd;
-    if (arr[0][0] != arr[0][1]) {
-      final[0] = 1;
+    if (arr[0][0] != arr[1][0]) {
+      arrFinal[i] = 1;
     }
-    if (arr[0][0] == 1 && arr[1][0] == 1) {
-      carry = 1;
-    }
+    tempAnd = arr[0][0] && arr[1][0];
     for (i = 1; i < 16; i++) {
-      if ((arr[0][1] != arr[1][i]) != carry) {
-        final[i] = 1;
-      }
-      if (arr[0][i] == 1 && arr[1][i] == 1 && carry == 1) {
-        carry = 1;
-      }
+      tempXor = arr[0][i] != arr[1][i];
+      arrFinal[i] = tempXor != carry;
+      carry = arr[0][i] && arr[1][i] && carry;
     }
   }
 }
